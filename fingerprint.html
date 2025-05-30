@@ -1,0 +1,262 @@
+<html>
+    <head>
+        <title>Climate fingerprints</title>
+        <script src="https://d3js.org/d3.v4.js"></script>
+
+        <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+        
+        <style>
+        
+         /* Tooltip container */
+         .tooltip {
+             position: relative;
+             display: inline-block;
+             border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+         }
+
+         /* Tooltip text */
+         .tooltip .tooltiptext {
+             visibility: hidden;
+             width: 120px;
+             background-color: black;
+             color: #fff;
+             text-align: center;
+             padding: 5px 0;
+             border-radius: 6px;
+             
+             /* Position the tooltip text - see examples below! */
+             position: absolute;
+             z-index: 1;
+         }
+         /* Show the tooltip text when you mouse over the tooltip container */
+         .tooltip:hover .tooltiptext {
+             visibility: visible;
+         }
+
+        </style>
+
+    </head>
+    <body>
+        <h1>Climate fingerprints</h1>
+
+        <section id="plot">
+            <div id="CO2plot"></div>
+        </section>
+
+        
+        <div id="result">Loading...</div>
+        
+        <div id="sliders">
+            Parameters (hover for details):
+            <div id="variable_selector" />
+            <button id='simulate' onclick="loadAndRun('temps.csv')">Simulate</button>
+        </div>
+
+
+
+
+        
+        <script>
+         var variable_data =
+             /* Data for the variable table. Should be in the form
+                ID, start val, min, max, step, label, name*/
+             [["ghg", 1, 0, 4, 0.05, "Greenhouse Gases", "Red: Temperature scaling for greenhouse gases"],
+              ["aer", 1, 0, 4, 0.05, "Aerosol", "Blue: Temperature scaling for aerosol cooling"],
+              ["nat", 1, 0, 4, 0.05, "Natural", "Green: Temperature scalig for natural forcings (volcanic and solar)"]]
+
+         function createTable(tab) {
+             var tar = document.getElementById(tab);
+             var table = document.createElement('TABLE');
+             table.border = '1';
+             var tbdy = document.createElement('TBODY');
+             table.appendChild(tbdy);
+             for (var j = 0; j < variable_data.length; j++) {
+                 var tr = document.createElement('TR');
+                 tbdy.appendChild(tr);
+                 var td = document.createElement('TD');
+                 td.innerHTML = "<label for="+variable_data[j][0]+" class='tooltip'>"+variable_data[j][5]+"<span class='tooltiptext'>"+variable_data[j][6]+"</span></label>";
+                 tr.appendChild(td);
+
+                 var td = document.createElement('TD');
+                 td.innerHTML = "<span id='val"+variable_data[j][0]+"'></span>";
+                 tr.appendChild(td);
+
+                 var td = document.createElement('TD');
+                 td.innerHTML = "<input type=range id="+variable_data[j][0]+" value="+variable_data[j][1]+" min="+variable_data[j][2]+" max="+variable_data[j][3]+" step="+variable_data[j][4]+" oninput='loadAndRun(&quot;temps.csv&quot;);' />";
+                 tr.appendChild(td);
+             }
+             tar.appendChild(table);
+         }
+
+         createTable('variable_selector');
+
+         var axis = null;
+         var yaxis = null;
+         var output_data = [];
+         var svg = null;
+         
+         function loadAndRun(filename) {
+             
+             d3.csv(filename, function(indata) {
+                 var start = Date.now();
+                 let finalMessage = '';
+
+                 //This part is fixed
+                 let year_min = 1850;
+                 let year_max = 2020;
+                 let year_len = year_max-year_min;
+                 let years = new Float32Array(year_len);
+                 for (y=0; y<year_len; y++) {
+                     years[y] = year_min+y;
+                 }   
+
+                 //CO2 reserviors, all empty in PI
+                 let ghgtemp = new Float32Array(year_len);
+                 let aertemp = new Float32Array(year_len);
+                 let nattemp = new Float32Array(year_len);
+                 let tottemp = new Float32Array(year_len);
+                 let actualtemp = new Float32Array(year_len);
+
+
+                 // These parts could be user-modifiable
+                 let ghg_scale = parseFloat(document.querySelector("#ghg").value)/1.7;
+                 let aer_scale = parseFloat(document.querySelector("#aer").value)/0.6;
+                 let nat_scale = parseFloat(document.querySelector("#nat").value)/2;
+
+                 // Make some plots
+                 let newplot = true
+                 
+                 
+                 let datavarname = 'Temp. Anomaly';
+                 if (newplot) { output_data = [] };
+                 output_data.push([]);
+
+                 console.log(indata)
+                 for (let yearind = 1; yearind < year_len; yearind++) {
+                     actualtemp[yearind] = indata[yearind+100].temps_enso;
+                     ghgtemp[yearind] = indata[yearind+100].ghg_temp;
+                     aertemp[yearind] = indata[yearind+100].aero_temp;
+                     nattemp[yearind] = indata[yearind+100].nat_temp;
+                     
+                     tottemp[yearind] = (ghg_scale*ghgtemp[yearind] +
+                                         aer_scale*aertemp[yearind] +
+                                         nat_scale*nattemp[yearind])
+                     output_data[output_data.length-1].push({year: years[yearind],
+                                                             tottemp: tottemp[yearind],
+                                                             ghgtemp: ghg_scale*ghgtemp[yearind],
+                                                             aertemp: aer_scale*aertemp[yearind],
+                                                             nattemp: nat_scale*nattemp[yearind],
+                                                             acttemp: actualtemp[yearind]});
+                     };
+                 
+                 // set the dimensions and margins of the graph
+                 var margin = {top: 10, right: 30, bottom: 30, left: 60},
+                     width = 460 - margin.left - margin.right,
+                     height = 400 - margin.top - margin.bottom;
+                 
+                 //var svg = d3.select("#CO2plot");
+
+                 // If fixed box is checked and plot already exists, don't redraw axes,
+                 // just append new line to plot
+                 if (newplot) {
+                     // remove old plot
+                     svg = d3.select("#CO2plot");
+                     svg.selectAll('*').remove();
+                     
+                     // append the svg object to the body of the page
+                     svg = d3.select("#CO2plot")
+                                 .append("svg")
+                                 .attr("width", width + margin.left + margin.right)
+                                 .attr("height", height + margin.top + margin.bottom)
+                                 .append("g")
+                                 .attr("transform",
+                                       "translate(" + margin.left + "," + margin.top + ")");
+
+                     // Add X axis --> it is a date format
+                     xaxis = d3.scaleLinear()
+                               .domain([year_min, year_max])
+                               .range([ 0, width ]);
+                     svg.append("g")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(d3.axisBottom(xaxis).tickFormat(d3.format("d")));
+
+                     svg.append("text")             
+                        .attr("transform",
+                              "translate(" + (width/2) + " ," + 
+                             (height + margin.top + 20) + ")")
+                        .style("text-anchor", "middle")
+                        .text("Year");
+                     
+                     // Add Y axis
+                     yaxis = d3.scaleLinear()
+                               .domain([d3.min(output_data[output_data.length-1], function(d) { return +d.acttemp; }),
+                                        d3.max(output_data[output_data.length-1], function(d) { return +d.acttemp; })])
+                               .range([ height, 0 ]);
+                     svg.append("g")
+                        .call(d3.axisLeft(yaxis));
+
+                     svg.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 0 - margin.left)
+                        .attr("x",0 - (height / 2))
+                        .attr("dy", "1em")
+                        .style("text-anchor", "middle")
+                        .text(datavarname);
+                 }
+                 
+                 // Add the line
+                 svg.append("path")
+                    .datum(output_data[output_data.length-1])
+                    .attr("fill", "none")
+                    .attr("stroke", "gray")
+                    .attr("stroke-width", 2)
+                    .attr("d", d3.line()
+                                 .x(function(d) { return xaxis(d.year) })
+                                 .y(function(d) { return yaxis(d.acttemp) })
+                    )
+                 // Add the line
+                 svg.append("path")
+                    .datum(output_data[output_data.length-1])
+                    .attr("fill", "none")
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2)
+                    .attr("d", d3.line()
+                                 .x(function(d) { return xaxis(d.year) })
+                                 .y(function(d) { return yaxis(d.tottemp) })
+                    )
+                 svg.append("path")
+                    .datum(output_data[output_data.length-1])
+                    .attr("fill", "none")
+                    .attr("stroke", "red")
+                    .attr("stroke-width", 2)
+                    .attr("d", d3.line()
+                                 .x(function(d) { return xaxis(d.year) })
+                                 .y(function(d) { return yaxis(d.ghgtemp) })
+                    )
+                 svg.append("path")
+                    .datum(output_data[output_data.length-1])
+                    .attr("fill", "none")
+                    .attr("stroke", "blue")
+                    .attr("stroke-width", 2)
+                    .attr("d", d3.line()
+                                 .x(function(d) { return xaxis(d.year) })
+                                 .y(function(d) { return yaxis(d.aertemp) })
+                    )
+                 svg.append("path")
+                    .datum(output_data[output_data.length-1])
+                    .attr("fill", "none")
+                    .attr("stroke", "green")
+                    .attr("stroke-width", 2)
+                    .attr("d", d3.line()
+                                 .x(function(d) { return xaxis(d.year) })
+                                 .y(function(d) { return yaxis(d.nattemp) })
+                    )
+                     
+                 document.getElementById('result').innerHTML = 'took: '+ (Date.now() - start) / 1000 + ' seconds';
+             });
+             };
+             
+             loadAndRun('temps.csv')
+        </script>
+    </body>
+</html>

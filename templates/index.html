@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Live D3 Plot with Persistence</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <style>
+         svg { border: 1px solid #ccc; }
+        </style>
+    </head>
+    <body>
+        <h2>Live D3 Scatter Plot (Persistent)</h2>
+        <svg width="600" height="400"></svg>
+
+        <script>
+         const svg = d3.select("svg");
+         const width = +svg.attr("width");
+         const height = +svg.attr("height");
+
+         const margin = {top: 20, right: 20, bottom: 30, left: 40};
+         const innerWidth = width - margin.left - margin.right;
+         const innerHeight = height - margin.top - margin.bottom;
+
+         const xScale = d3.scaleLinear().domain([0, 100]).range([0, innerWidth]);
+         const yScale = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
+
+         const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+         g.append("g")
+          .attr("class", "x-axis")
+          .attr("transform", `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale));
+
+         g.append("g")
+          .attr("class", "y-axis")
+          .call(d3.axisLeft(yScale));
+
+         const points = [];
+
+         // Define color scale (0 to 100 mapped to Viridis colormap)
+         const colorScale = d3.scaleSequential(d3.interpolateViridis)
+                              .domain([0, 100]);
+
+         function updatePlot() {
+             // Plot all points with color based on `value`
+             g.selectAll("circle")
+              .data(points)
+              .join("circle")
+              .attr("cx", d => xScale(d.x))
+              .attr("cy", d => yScale(d.y))
+              .attr("r", 4)
+              .attr("fill", d => colorScale(d.value ?? 50)); // Default color if missing
+
+             // Remove old label
+             g.selectAll(".latest-label").remove();
+
+             // Add label to newest point
+             const latest = points[points.length - 1];
+             if (latest) {
+                 g.append("text")
+                  .attr("class", "latest-label")
+                  .attr("x", xScale(latest.x) + 6)
+                  .attr("y", yScale(latest.y) - 6)
+                  .text(`(${latest.x}, ${latest.y})`)
+                  .attr("font-size", "12px")
+                  .attr("fill", "black");
+             }
+         }
+         // Load saved data
+         fetch("/data")
+             .then(res => res.json())
+             .then(data => {
+                 points.push(...data);
+                 updatePlot();
+             })
+             .catch(err => console.error("Failed to load initial data:", err));
+
+         // Listen for new points via SSE
+         const eventSource = new EventSource("/events");
+         eventSource.onmessage = (event) => {
+             try {
+                 const data = JSON.parse(event.data);
+                 points.push(data);
+                 updatePlot();
+             } catch (err) {
+                 console.error("Error parsing SSE data:", err);
+             }
+         };
+        </script>
+    </body>
+</html>
