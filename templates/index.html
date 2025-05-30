@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Live D3 Plot with Persistence</title>
+        <title>Climate detective</title>
         <script src="https://d3js.org/d3.v7.min.js"></script>
         <style>
          svg { border: 1px solid #ccc; }
         </style>
     </head>
     <body>
-        <h2>Live D3 Scatter Plot (Persistent)</h2>
+        <h2>Climate detective</h2>
+
+        <div>Why does the size of the aerosol cooling matter?</div>
+
         <svg width="600" height="400"></svg>
 
         <script>
@@ -16,12 +19,12 @@
          const width = +svg.attr("width");
          const height = +svg.attr("height");
 
-         const margin = {top: 20, right: 20, bottom: 30, left: 40};
+         const margin = {top: 20, right: 20, bottom: 50, left: 60};
          const innerWidth = width - margin.left - margin.right;
          const innerHeight = height - margin.top - margin.bottom;
 
          const xScale = d3.scaleLinear().domain([0, 100]).range([0, innerWidth]);
-         const yScale = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
+         const yScale = d3.scaleLinear().domain([-2, 0]).range([innerHeight, 0]);
 
          const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -30,6 +33,23 @@
           .attr("transform", `translate(0,${innerHeight})`)
           .call(d3.axisBottom(xScale));
 
+         // X Axis Label
+         svg.append("text")
+            .attr("class", "x label")
+            .attr("text-anchor", "middle")
+            .attr("x", margin.left + innerWidth / 2)
+            .attr("y", height - 6)
+            .text("Remaining Carbon Budget (%)");
+
+         // Y Axis Label
+         svg.append("text")
+            .attr("class", "y label")
+            .attr("text-anchor", "middle")
+            .attr("x", -(margin.top + innerHeight / 2))
+            .attr("y", 14)
+            .attr("transform", "rotate(-90)")
+            .text("Aerosol Cooling");
+         
          g.append("g")
           .attr("class", "y-axis")
           .call(d3.axisLeft(yScale));
@@ -41,29 +61,45 @@
                               .domain([0, 100]);
 
          function updatePlot() {
-             // Plot all points with color based on `value`
+             const inBoundsPoints = points.filter(p =>
+                 p.x >= 0 && p.x <= 100 && p.y >= -2 && p.y <= 0
+             );
+
              g.selectAll("circle")
-              .data(points)
+              .data(inBoundsPoints)
               .join("circle")
               .attr("cx", d => xScale(d.x))
               .attr("cy", d => yScale(d.y))
               .attr("r", 4)
-              .attr("fill", d => colorScale(d.value ?? 50)); // Default color if missing
+              .attr("fill", d => colorScale(d.value ?? 50));
+             
+             
 
              // Remove old label
              g.selectAll(".latest-label").remove();
 
              // Add label to newest point
-             const latest = points[points.length - 1];
+             const latest = inBoundsPoints[inBoundsPoints.length - 1];
              if (latest) {
                  g.append("text")
                   .attr("class", "latest-label")
                   .attr("x", xScale(latest.x) + 6)
                   .attr("y", yScale(latest.y) - 6)
-                  .text(`(${latest.x}, ${latest.y})`)
+                  .text(`(${latest.x.toFixed(2)}, ${latest.y.toFixed(2)})`)
                   .attr("font-size", "12px")
-                  .attr("fill", "black");
-             }
+                  .attr("fill", "black")
+                  .each(function () {
+                      const bbox = this.getBBox();
+                      g.insert("rect", ".latest-label")
+                       .attr("class", "label-bg")
+                       .attr("x", bbox.x - 2)
+                       .attr("y", bbox.y - 1)
+                       .attr("width", bbox.width + 4)
+                       .attr("height", bbox.height + 2)
+                       .attr("fill", "white")
+                       .attr("stroke", "black");
+                  });
+                 }
          }
          // Load saved data
          fetch("/data")

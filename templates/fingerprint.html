@@ -37,8 +37,10 @@
 
     </head>
     <body>
-        <h1>Climate fingerprints</h1>
+        <h1>Climate detective</h1>
 
+        How much are aerosols cooling the atmosphere? Can you work it out from changes in temperature over the last 150 years?
+        
         <section id="plot">
             <div id="CO2plot"></div>
         </section>
@@ -46,13 +48,23 @@
         
         <div id="result">Loading...</div>
         
+        <div id="budget">Loading...</div>
+        <div id="fraction">Loading...</div>
+        <div id="fit_score">Loading...</div>
+        <div id="aer_temp">Loading...</div>
+
+
         <div id="sliders">
             Parameters (hover for details):
-            <div id="variable_selector" />
-            <button id='simulate' onclick="loadAndRun('temps.csv')">Simulate</button>
+            <div id="variable_selector"></div>
+
+
+            <button id='simulate' onclick="loadAndRun('static/temps.csv')">Simulate</button>
+
+            <button id='submit' onclick="submitCarbonBudget()">Submit</button>
         </div>
 
-
+        
 
 
         
@@ -60,9 +72,9 @@
          var variable_data =
              /* Data for the variable table. Should be in the form
                 ID, start val, min, max, step, label, name*/
-             [["ghg", 1, 0, 4, 0.05, "Greenhouse Gases", "Red: Temperature scaling for greenhouse gases"],
-              ["aer", 1, 0, 4, 0.05, "Aerosol", "Blue: Temperature scaling for aerosol cooling"],
-              ["nat", 1, 0, 4, 0.05, "Natural", "Green: Temperature scalig for natural forcings (volcanic and solar)"]]
+             [["ghg", 1, 0, 4, 0.01, "Greenhouse Gases", "Red: Temperature scaling for greenhouse gases"],
+              ["aer", 1, 0, 4, 0.01, "Aerosol", "Blue: Temperature scaling for aerosol cooling"],
+              ["nat", 1, 0, 4, 0.01, "Natural", "Green: Temperature scalig for natural forcings (volcanic and solar)"]]
 
          function createTable(tab) {
              var tar = document.getElementById(tab);
@@ -82,7 +94,7 @@
                  tr.appendChild(td);
 
                  var td = document.createElement('TD');
-                 td.innerHTML = "<input type=range id="+variable_data[j][0]+" value="+variable_data[j][1]+" min="+variable_data[j][2]+" max="+variable_data[j][3]+" step="+variable_data[j][4]+" oninput='loadAndRun(&quot;temps.csv&quot;);' />";
+                 td.innerHTML = "<input type=range id="+variable_data[j][0]+" value="+variable_data[j][1]+" min="+variable_data[j][2]+" max="+variable_data[j][3]+" step="+variable_data[j][4]+" oninput='loadAndRun(&quot;static/temps.csv&quot;);' />";
                  tr.appendChild(td);
              }
              tar.appendChild(table);
@@ -94,6 +106,62 @@
          var yaxis = null;
          var output_data = [];
          var svg = null;
+
+         //This part is fixed
+         var year_min = 1850;
+         var year_max = 2070;
+         var year_max_temp = 2020;
+         var year_len = year_max-year_min;
+         var year_len_temp = year_max_temp-year_min;
+         var years = new Float32Array(year_len);
+         for (y=0; y<year_len; y++) {
+             years[y] = year_min+y;
+         }
+         var co2_2020_cum_emissions = 1.70;
+         var annual_co2_emissions_2024 = 0.0363
+         
+         //CO2 reserviors, all empty in PI
+         var ghgtemp = new Float32Array(year_len);
+         var aertemp = new Float32Array(year_len);
+         var nattemp = new Float32Array(year_len);
+         var tottemp = new Float32Array(year_len);
+         var actualtemp = new Float32Array(year_len);
+
+         function rmsd(arr1, arr2) {
+             if (arr1.length !== arr2.length) {
+                 throw new Error("Arrays must be of the same length");
+             }
+
+             const n = arr1.length;
+             const sumSquares = arr1.reduce((sum, val, i) => {
+                 const diff = val - arr2[i];
+                 return sum + diff * diff;
+             }, 0);
+
+             return Math.sqrt(sumSquares / n);
+         }
+
+         function score(rmsd) {
+             return Math.max(0, (100 - 2000*(rmsd-0.21)));
+         }
+         
+         function submitCarbonBudget() {
+             two_deg_index = tottemp.findIndex(x => x > 2);
+             temp_2020 = tottemp[year_len_temp];
+             aer_2020 = aertemp[year_len_temp];
+             carbon_budget = (100*(2-temp_2020)/2);
+             
+             fit_score = score(rmsd(actualtemp.slice(0, year_len_temp),
+                                    tottemp.slice(0, year_len_temp)));
+
+             document.getElementById('fraction').innerHTML = 'Remaining Carbon Budget: '+carbon_budget.toFixed(1)+'%';
+             document.getElementById('budget').innerHTML = 'Remaining time (no action): '+(two_deg_index-year_len_temp)+' years';
+             document.getElementById('fit_score').innerHTML = 'Score:' +fit_score;
+             document.getElementById('aer_temp').innerHTML = 'Aerosol:' +aer_2020.toFixed(2);
+
+             fetch('http://localhost:5000/trigger?x='+carbon_budget+'&y='+aer_2020+'&value='+fit_score)
+             }
+
          
          function loadAndRun(filename) {
              
@@ -101,31 +169,14 @@
                  var start = Date.now();
                  let finalMessage = '';
 
-                 //This part is fixed
-                 let year_min = 1850;
-                 let year_max = 2020;
-                 let year_len = year_max-year_min;
-                 let years = new Float32Array(year_len);
-                 for (y=0; y<year_len; y++) {
-                     years[y] = year_min+y;
-                 }   
-
-                 //CO2 reserviors, all empty in PI
-                 let ghgtemp = new Float32Array(year_len);
-                 let aertemp = new Float32Array(year_len);
-                 let nattemp = new Float32Array(year_len);
-                 let tottemp = new Float32Array(year_len);
-                 let actualtemp = new Float32Array(year_len);
-
-
+                 
                  // These parts could be user-modifiable
                  let ghg_scale = parseFloat(document.querySelector("#ghg").value)/1.7;
-                 let aer_scale = parseFloat(document.querySelector("#aer").value)/0.6;
+                 let aer_scale = parseFloat(document.querySelector("#aer").value)/0.8;
                  let nat_scale = parseFloat(document.querySelector("#nat").value)/2;
-
+                 
                  // Make some plots
                  let newplot = true
-                 
                  
                  let datavarname = 'Temp. Anomaly';
                  if (newplot) { output_data = [] };
@@ -134,24 +185,24 @@
                  console.log(indata)
                  for (let yearind = 1; yearind < year_len; yearind++) {
                      actualtemp[yearind] = indata[yearind+100].temps_enso;
-                     ghgtemp[yearind] = indata[yearind+100].ghg_temp;
-                     aertemp[yearind] = indata[yearind+100].aero_temp;
-                     nattemp[yearind] = indata[yearind+100].nat_temp;
+                     ghgtemp[yearind] = ghg_scale*indata[yearind+100].ghg_temp;
+                     aertemp[yearind] = aer_scale*indata[yearind+100].aero_temp;
+                     nattemp[yearind] = nat_scale*indata[yearind+100].nat_temp;
                      
-                     tottemp[yearind] = (ghg_scale*ghgtemp[yearind] +
-                                         aer_scale*aertemp[yearind] +
-                                         nat_scale*nattemp[yearind])
+                     tottemp[yearind] = (ghgtemp[yearind] +
+                                         aertemp[yearind] +
+                                         nattemp[yearind])
                      output_data[output_data.length-1].push({year: years[yearind],
                                                              tottemp: tottemp[yearind],
-                                                             ghgtemp: ghg_scale*ghgtemp[yearind],
-                                                             aertemp: aer_scale*aertemp[yearind],
-                                                             nattemp: nat_scale*nattemp[yearind],
+                                                             ghgtemp: ghgtemp[yearind],
+                                                             aertemp: aertemp[yearind],
+                                                             nattemp: nattemp[yearind],
                                                              acttemp: actualtemp[yearind]});
                      };
                  
                  // set the dimensions and margins of the graph
                  var margin = {top: 10, right: 30, bottom: 30, left: 60},
-                     width = 460 - margin.left - margin.right,
+                     width = 660 - margin.left - margin.right,
                      height = 400 - margin.top - margin.bottom;
                  
                  //var svg = d3.select("#CO2plot");
@@ -189,8 +240,9 @@
                      
                      // Add Y axis
                      yaxis = d3.scaleLinear()
-                               .domain([d3.min(output_data[output_data.length-1], function(d) { return +d.acttemp; }),
-                                        d3.max(output_data[output_data.length-1], function(d) { return +d.acttemp; })])
+                     /* .domain([d3.min(output_data[output_data.length-1], function(d) { return +d.acttemp; }),
+                      *          d3.max(output_data[output_data.length-1], function(d) { return +d.acttemp; })]) */
+                     .domain([-1, 2.5])
                                .range([ height, 0 ]);
                      svg.append("g")
                         .call(d3.axisLeft(yaxis));
@@ -206,7 +258,7 @@
                  
                  // Add the line
                  svg.append("path")
-                    .datum(output_data[output_data.length-1])
+                    .datum(output_data[output_data.length-1].slice(0, year_len_temp))
                     .attr("fill", "none")
                     .attr("stroke", "gray")
                     .attr("stroke-width", 2)
@@ -253,10 +305,11 @@
                     )
                      
                  document.getElementById('result').innerHTML = 'took: '+ (Date.now() - start) / 1000 + ' seconds';
+                 submitCarbonBudget();
              });
              };
-             
-             loadAndRun('temps.csv')
+         
+             loadAndRun('static/temps.csv')
         </script>
     </body>
 </html>

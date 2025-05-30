@@ -4,7 +4,8 @@ from threading import Thread, Event
 from queue import Queue
 import os
 
-app = Flask(__name__)
+app = Flask(__name__,
+            static_folder='static')
 clients = []
 DATA_FILE = "data.json"
 
@@ -39,6 +40,10 @@ notifier.start()
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/fingerprint')
+def users():
+    return render_template('fingerprint.html')
 
 @app.route('/trigger')
 def trigger():
