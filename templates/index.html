@@ -77,15 +77,17 @@
 
              // Remove old label
              g.selectAll(".latest-label").remove();
-
+             g.selectAll(".label-bg").remove();
+             g.selectAll(".label-arrow").remove();
+             
              // Add label to newest point
              const latest = inBoundsPoints[inBoundsPoints.length - 1];
              if (latest) {
                  g.append("text")
                   .attr("class", "latest-label")
-                  .attr("x", xScale(latest.x) + 6)
-                  .attr("y", yScale(latest.y) - 6)
-                  .text(`(${latest.x.toFixed(2)}, ${latest.y.toFixed(2)})`)
+                  .attr("x", xScale(latest.x) + 12)
+                  .attr("y", yScale(latest.y) - 12)
+                  .text(`Budget: ${latest.x.toFixed(2)}% remains.   Cooling: ${latest.y.toFixed(2)}C)`)
                   .attr("font-size", "12px")
                   .attr("fill", "black")
                   .each(function () {
@@ -98,6 +100,20 @@
                        .attr("height", bbox.height + 2)
                        .attr("fill", "white")
                        .attr("stroke", "black");
+
+                      // Add arrow (short line) from label to point
+                      const labelAnchorX = bbox.x;  // Left edge of label
+                      const labelAnchorY = bbox.y + bbox.height / 2;  // Vertical center of label
+
+                      g.append("line")
+                       .attr("class", "label-arrow")
+                       .attr("x1", labelAnchorX)
+                       .attr("y1", labelAnchorY)
+                       .attr("x2", xScale(latest.x))
+                       .attr("y2", yScale(latest.y))
+                       .attr("stroke", "black")
+                       .attr("stroke-width", 1)
+                       .attr("marker-end", "url(#arrowhead)");
                   });
                  }
          }

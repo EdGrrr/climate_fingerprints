@@ -110,7 +110,7 @@
          //This part is fixed
          var year_min = 1850;
          var year_max = 2070;
-         var year_max_temp = 2020;
+         var year_max_temp = 2024;
          var year_len = year_max-year_min;
          var year_len_temp = year_max_temp-year_min;
          var years = new Float32Array(year_len);
@@ -142,7 +142,7 @@
          }
 
          function score(rmsd) {
-             return Math.max(0, (100 - 2000*(rmsd-0.21)));
+             return Math.max(0, (100 - 2000*(rmsd-0.207)));
          }
          
          function submitCarbonBudget() {
