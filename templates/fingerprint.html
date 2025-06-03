@@ -33,55 +33,155 @@
              visibility: visible;
          }
 
+         /* Overlay background */
+         #instructionPopup {
+             position: fixed;
+             top: 0;
+             left: 0;
+             width: 100vw;
+             height: 100vh;
+             background: rgba(0, 0, 0, 0.7);
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             z-index: 9999;
+         }
+
+         /* Popup content box */
+         .popup-content {
+             background: white;
+             padding: 2rem;
+             border-radius: 10px;
+             text-align: center;
+             max-width: 500px;
+             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+         }
+
+         .popup-content h2 {
+             margin-top: 0;
+         }
+
+         .popup-content button {
+             margin-top: 1.5rem;
+             padding: 0.6rem 1.2rem;
+             font-size: 1rem;
+             cursor: pointer;
+             border: none;
+             border-radius: 5px;
+             background-color: #007bff;
+             color: white;
+         }
+
+         /* Optional: disable scrolling when popup is active */
+         body.popup-active {
+             overflow: hidden;
+         }
+
+         .square {
+             display: inline-block;
+             width: 1em;
+             height: 1em;
+             vertical-align: middle;
+             border: 2px solid black;
+         }
+
+         .red {
+             background-color: red;
+         }
+         .blue {
+             background-color: blue;
+         }
+         .green {
+             background-color: green;
+         }
+         .black {
+             background-color: black;
+         }
+         .grey {
+             background-color: grey;
+         }
         </style>
 
     </head>
     <body>
         <h1>Climate detective</h1>
 
-        How much are aerosols cooling the atmosphere? Can you work it out from changes in temperature over the last 150 years?
+        <!-- Instruction Popup -->
+        <div id="instructionPopup">
+            <div class="popup-content">
+                <h2>Welcome Climate Detective!</h2>
+                <p>How much time is left before we reach 2 degrees warming?</p>
+                <p>Try matching temperature change over the last 150 years</p>
+                <ul style="text-align: left;">
+                    <li><span class="square red"></span> Greenhouses gases warm the climate</li>
+                    <li><span class="square blue"></span> Aerosols cool the climate (by changing clouds)</li>
+                    <li><span class="square green"></span> Natural changes (mostly volcanos) cool the climate</li>
+                </ul>
+
+                <p>To get started:</p>
+                <ol style="text-align: left;">
+                    <li>Use the sliders and simple climate model to get the best match between</li>
+                    <ul style="text-align: left;">
+                        <li><span class="square black"></span> Simulated temperatures</li>
+                        <li><span class="square grey"></span> Measured temperatures</li>
+                    </ul>
+                    <li>Press the submit button to see your result.</li>
+                </ol>
+                <button onclick="closePopup()">Let's go!</button>
+            </div>
+        </div>
+
+        <h3>Use the sliders to match the temperature change over the last 150 years</h3>
         
         <section id="plot">
             <div id="CO2plot"></div>
         </section>
 
         
-        <div id="result">Loading...</div>
+        <div style="display: none;">
+            <div id="result">Loading...</div>
         
-        <div id="budget">Loading...</div>
-        <div id="fraction">Loading...</div>
-        <div id="fit_score">Loading...</div>
-        <div id="aer_temp">Loading...</div>
+            <div id="budget">Loading...</div>
+            <div id="fraction">Loading...</div>
+            <div id="fit_score">Loading...</div>
+            <div id="aer_temp">Loading...</div>
+        </div>
 
 
         <div id="sliders">
-            Parameters (hover for details):
             <div id="variable_selector"></div>
 
-
-            <button id='simulate' onclick="loadAndRun('static/temps.csv')">Simulate</button>
+            <!-- 
+                 <button id='simulate' onclick="loadAndRun('static/temps.csv')">Simulate</button> -->
 
             <button id='submit' onclick="submitCarbonBudget()">Submit</button>
         </div>
 
-        
-
-
-        
+                
         <script>
          var variable_data =
              /* Data for the variable table. Should be in the form
                 ID, start val, min, max, step, label, name*/
-             [["ghg", 1, 0, 4, 0.01, "Greenhouse Gases", "Red: Temperature scaling for greenhouse gases"],
-              ["aer", 1, 0, 4, 0.01, "Aerosol", "Blue: Temperature scaling for aerosol cooling"],
-              ["nat", 1, 0, 4, 0.01, "Natural", "Green: Temperature scalig for natural forcings (volcanic and solar)"]]
+             [["ghg", 2, 0, 4, 0.001, "Greenhouse Gases",
+               "Red: Temperature scaling for greenhouse gases", "red"],
+              ["aer", 2, 0, 4, 0.001, "Aerosol",
+               "Blue: Temperature scaling for aerosol cooling", "blue"],
+              ["nat", 2, 0, 4, 0.001, "Natural",
+               "Green: Temperature scalig for natural forcings (volcanic and solar)", "green"]]
 
+         function closePopup() {
+             document.getElementById('instructionPopup').style.display = 'none';
+             document.body.classList.remove('popup-active');
+         }
+         
          function createTable(tab) {
              var tar = document.getElementById(tab);
              var table = document.createElement('TABLE');
              table.border = '1';
              var tbdy = document.createElement('TBODY');
              table.appendChild(tbdy);
+             tbdy.insertAdjacentHTML('beforeend', "<tr><td>Measured Temperatures</td><td><span class='square grey'></span></td><td></td></tr>");
+             tbdy.insertAdjacentHTML('beforeend', "<tr><td>Simulated Temperatures</td><td><span class='square black'></span></td><td></td></tr>");
              for (var j = 0; j < variable_data.length; j++) {
                  var tr = document.createElement('TR');
                  tbdy.appendChild(tr);
@@ -90,7 +190,7 @@
                  tr.appendChild(td);
 
                  var td = document.createElement('TD');
-                 td.innerHTML = "<span id='val"+variable_data[j][0]+"'></span>";
+                 td.innerHTML = "<span class='square "+variable_data[j][7]+"'></span>";
                  tr.appendChild(td);
 
                  var td = document.createElement('TD');
@@ -109,7 +209,7 @@
 
          //This part is fixed
          var year_min = 1850;
-         var year_max = 2070;
+         var year_max = 2100;
          var year_max_temp = 2024;
          var year_len = year_max-year_min;
          var year_len_temp = year_max_temp-year_min;
@@ -126,7 +226,7 @@
          var nattemp = new Float32Array(year_len);
          var tottemp = new Float32Array(year_len);
          var actualtemp = new Float32Array(year_len);
-
+         
          function rmsd(arr1, arr2) {
              if (arr1.length !== arr2.length) {
                  throw new Error("Arrays must be of the same length");
@@ -147,6 +247,7 @@
          
          function submitCarbonBudget() {
              two_deg_index = tottemp.findIndex(x => x > 2);
+             two_deg_time = (tottemp[two_deg_index]-2)/(tottemp[two_deg_index]-tottemp[two_deg_index-1])  + (two_deg_index-year_len_temp);
              temp_2020 = tottemp[year_len_temp];
              aer_2020 = aertemp[year_len_temp];
              carbon_budget = (100*(2-temp_2020)/2);
@@ -155,11 +256,11 @@
                                     tottemp.slice(0, year_len_temp)));
 
              document.getElementById('fraction').innerHTML = 'Remaining Carbon Budget: '+carbon_budget.toFixed(1)+'%';
-             document.getElementById('budget').innerHTML = 'Remaining time (no action): '+(two_deg_index-year_len_temp)+' years';
+             document.getElementById('budget').innerHTML = 'Remaining time (no action): '+two_deg_time+' years';
              document.getElementById('fit_score').innerHTML = 'Score:' +fit_score;
              document.getElementById('aer_temp').innerHTML = 'Aerosol:' +aer_2020.toFixed(2);
 
-             fetch('http://localhost:5000/trigger?x='+carbon_budget+'&y='+aer_2020+'&value='+fit_score)
+             fetch('http://localhost:5000/trigger?x='+carbon_budget+'&y='+aer_2020+'&t='+two_deg_time+'&value='+fit_score)
              }
 
          
@@ -242,7 +343,7 @@
                      yaxis = d3.scaleLinear()
                      /* .domain([d3.min(output_data[output_data.length-1], function(d) { return +d.acttemp; }),
                       *          d3.max(output_data[output_data.length-1], function(d) { return +d.acttemp; })]) */
-                     .domain([-1, 2.5])
+                     .domain([-1.5, 3])
                                .range([ height, 0 ]);
                      svg.append("g")
                         .call(d3.axisLeft(yaxis));

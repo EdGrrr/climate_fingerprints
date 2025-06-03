@@ -41,6 +41,11 @@ notifier.start()
 def index():
     return render_template('index.html')
 
+@app.route('/budget')
+def budget():
+    return render_template('index_budget.html')
+
+
 @app.route('/fingerprint')
 def users():
     return render_template('fingerprint.html')
@@ -49,10 +54,11 @@ def users():
 def trigger():
     x = request.args.get("x", type=float)
     y = request.args.get("y", type=float)
+    t = request.args.get("t", type=float)
     value = request.args.get("value", default=50, type=float)  # Default: mid-scale
 
     if x is not None and y is not None:
-        data = {"x": x, "y": y, "value": value}
+        data = {"x": x, "y": y, "value": value, "t": t}
         stored_data.append(data)
 
         with open(DATA_FILE, "w") as f:
@@ -60,7 +66,7 @@ def trigger():
 
         notifier.data_queue.append(data)
         notifier.updated.set()
-        return f"Added point: ({x}, {y}, value={value})"
+        return f"Added point: ({x}, {y}, {t}, value={value})"
     return "Missing x or y", 400
 
 @app.route('/data')
