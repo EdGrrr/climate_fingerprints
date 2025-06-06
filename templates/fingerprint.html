@@ -100,11 +100,45 @@
          .grey {
              background-color: grey;
          }
+
+         .centre_block {
+             text-align: center;
+         }
+
+         /* Base layout - mobile first (stacked vertically) */
+         .container {
+             display: flex;
+             flex-direction: column;
+             gap: 1rem;
+         }
+
+         .left, .top-right, .bottom-right {
+             padding: 1rem;
+         }
+
+         /* For larger screens - two-column layout */
+         @media (min-width: 1100px) {
+             .container {
+                 flex-direction: row;
+             }
+
+             .left {
+                 flex: 2;
+             }
+
+             .right {
+                 flex: 1;
+                 display: flex;
+                 flex-direction: column;
+                 gap: 1rem;
+             }
+         }
+
         </style>
 
     </head>
     <body>
-        <h1>Climate detective</h1>
+        <div class='centre_block'><h1>Climate Detective</h1></div>
 
         <!-- Instruction Popup -->
         <div id="instructionPopup">
@@ -132,31 +166,34 @@
         </div>
 
         <h3>Use the sliders to match the temperature change over the last 150 years</h3>
-        
-        <section id="plot">
-            <div id="CO2plot"></div>
-        </section>
 
-        
-        <div style="display: none;">
-            <div id="result">Loading...</div>
-        
-            <div id="budget">Loading...</div>
-            <div id="fraction">Loading...</div>
-            <div id="fit_score">Loading...</div>
-            <div id="aer_temp">Loading...</div>
+        <div class="container">
+            <section id="plot" class="left centre_block">
+                <div id="CO2plot"></div>
+            </section>
+
+            
+            <div style="display: none;">
+                <div id="result">Loading...</div>
+                
+                <div id="budget">Loading...</div>
+                <div id="fraction">Loading...</div>
+                <div id="fit_score">Loading...</div>
+                <div id="aer_temp">Loading...</div>
+            </div>
+
+
+            <div id="sliders" class="right">
+                <div id="variable_selector" class="top-right"></div>
+
+                <!-- 
+                     <button id='simulate' onclick="loadAndRun('static/temps.csv')">Simulate</button> -->
+
+                <div class="bottom-right">
+                    <button id='submit' onclick="submitCarbonBudget()">Submit</button>
+                </div>
+            </div>
         </div>
-
-
-        <div id="sliders">
-            <div id="variable_selector"></div>
-
-            <!-- 
-                 <button id='simulate' onclick="loadAndRun('static/temps.csv')">Simulate</button> -->
-
-            <button id='submit' onclick="submitCarbonBudget()">Submit</button>
-        </div>
-
                 
         <script>
          var variable_data =

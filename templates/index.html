@@ -5,14 +5,18 @@
         <script src="https://d3js.org/d3.v7.min.js"></script>
         <style>
          svg { border: 1px solid #ccc; }
+
+         .centre_block {
+             text-align: center;
+             }
         </style>
     </head>
     <body>
-        <h2>Climate detective</h2>
+        <div class='centre_block'><h1>Climate Detective</h1></div>
 
-        <div id='score_block'><h3>Your score: <span id='score'>0<\span></h3></div>
+        <div id='score_block' class='centre_block'><h3>Your score: <span id='score'>0</span></h3></div>
 
-        <svg width="600" height="400"></svg>
+        <div class='centre_block'><svg width="600" height="400"></svg></div>
 
         
         <script>
