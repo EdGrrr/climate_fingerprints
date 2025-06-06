@@ -153,6 +153,12 @@
              // Add label to newest point
              const latest = inBoundsPoints[inBoundsPoints.length - 1];
              if (latest) {
+                 g.append("circle")
+                  .attr("cx", d => xScale(latest.t))
+                  .attr("cy", d => yScale(latest.y))
+                  .attr("r", 10)
+                  .attr("fill", "red");
+                 
                  g.append("text")
                   .attr("class", "latest-label")
                   .attr("x", xScale(latest.t) + 12)
