@@ -8,16 +8,32 @@
 
          .centre_block {
              text-align: center;
+         }
+
+         .bottom_images {
+             position: fixed;
+             bottom: 0;
+             float: right;
              }
         </style>
     </head>
     <body>
-        <div class='centre_block'><h1>Climate Detective</h1></div>
+        <div class='centre_block'><h1>Become a Climate Detective!</h1></div>
 
-        <div id='score_block' class='centre_block'><h3>Your score: <span id='score'>0</span></h3></div>
+        <div class='centre_block'>How long until we reach 2 degrees? Use Earth's past to help predict the future!</div>
 
-        <div class='centre_block'><svg width="600" height="400"></svg></div>
+        <div id='score_block' class='centre_block'>
+            <h3>Your score: <span id='score'>0</span>
+                <span style="display:inline-block; width:2em;"></span>
+                <span id='years'>0</span> years until 2 degrees of warming</h3></div>
+        
+        <div class='centre_block'><svg width="700" height="400"></svg></div>
 
+        <div class="bottom_images">
+            <img style="height:60px" src="static/logo-royal-society.png" alt="Image 1">
+            <img style="height:60px" src="static/logo-eufunding-hor.png" alt="Image 2">
+            <img style="height:60px" src="static/logo-certainty-long.png" alt="Image 3">
+        </div>
         
         <script>
          const svg = d3.select("svg");
@@ -25,7 +41,7 @@
          const height = +svg.attr("height");
 
          const margin = {top: 20, right: 20, bottom: 50, left: 60};
-         const innerWidth = width - margin.left - margin.right;
+         const innerWidth = width - margin.left - margin.right -100;
          const innerHeight = height - margin.top - margin.bottom;
 
          const xScale = d3.scaleLinear().domain([0, 45]).range([0, innerWidth]);
@@ -65,9 +81,58 @@
          const colorScale = d3.scaleSequential(d3.interpolateViridis)
                               .domain([0, 100]);
 
+         // ==================== Colorbar ====================
+         const colorbarWidth = 20;
+         const colorbarHeight = 200;
+
+         // Gradient definition
+         const defs = svg.append("defs");
+         const gradient = defs.append("linearGradient")
+                              .attr("id", "color-gradient")
+                              .attr("x1", "0%").attr("x2", "0%")
+                              .attr("y1", "100%").attr("y2", "0%");
+
+         const numStops = 10;
+         d3.range(numStops).forEach(i => {
+             const value = i / (numStops - 1);
+             gradient.append("stop")
+                     .attr("offset", `${value * 100}%`)
+                     .attr("stop-color", colorScale(0 + value * 100)); // domain: [0, 100]
+         });
+
+         // Add colorbar rectangle
+         svg.append("rect")
+            .attr("x", width - margin.right - colorbarWidth-30)
+            .attr("y", margin.top + (innerHeight-colorbarHeight)/2)
+            .attr("width", colorbarWidth)
+            .attr("height", colorbarHeight)
+            .style("fill", "url(#color-gradient)");
+
+         svg.append("text")
+            .attr("x", width - margin.right) // Position left of axis
+            .attr("y", margin.top + innerHeight / 2)
+            .attr("text-anchor", "middle")
+            .attr("transform", `rotate(-90, ${width - margin.right}, ${margin.top + innerHeight / 2})`)
+            .text("Score") // Change to your actual label
+            .style("font-size", "12px");
+
+         // Add colorbar axis
+         const colorScaleAxis = d3.scaleLinear()
+                                  .domain([0, 100])
+                                  .range([colorbarHeight, 0]);
+
+         const colorAxis = d3.axisRight(colorScaleAxis).ticks(5);
+
+         svg.append("g")
+            .attr("transform", `translate(${width - margin.right -30}, ${margin.top + (innerHeight-colorbarHeight)/2})`)
+            .call(colorAxis);
+
+
+
+         
          function updatePlot() {
              const inBoundsPoints = points.filter(p =>
-                 p.x >= 0 && p.x <= 45 && p.y >= -2 && p.y <= 0
+                 p.t >= 0 && p.t <= 45 && p.y >= -2 && p.y <= 0
              );
 
              g.selectAll("circle")
@@ -129,6 +194,7 @@
                  points.push(...data);
                  updatePlot();
                  document.getElementById("score").innerHTML = points[points.length-1].value.toFixed(2);
+                 document.getElementById("years").innerHTML = points[points.length-1].t.toFixed(2);
              })
              .catch(err => console.error("Failed to load initial data:", err));
 

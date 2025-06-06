@@ -57,7 +57,7 @@ def trigger():
     t = request.args.get("t", type=float)
     value = request.args.get("value", default=50, type=float)  # Default: mid-scale
 
-    if x is not None and y is not None:
+    if x is not None and y is not None and t is not None and (t>=0) and (t < 10000):
         data = {"x": x, "y": y, "value": value, "t": t}
         stored_data.append(data)
 

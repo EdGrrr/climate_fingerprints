@@ -134,6 +134,27 @@
              }
          }
 
+         .submit-button {
+             background-color: #007BFF; /* Bootstrap blue */
+             color: white;
+             padding: 12px 24px;
+             font-size: 16px;
+             border: none;
+             border-radius: 6px;
+             cursor: pointer;
+         }
+
+         .submit-button:hover {
+             background-color: #0056b3; /* Darker on hover */
+         }
+
+         .bottom_images {
+             position: fixed;
+             bottom: 0;
+             float: right;
+         }
+         
+         
         </style>
 
     </head>
@@ -190,11 +211,18 @@
                      <button id='simulate' onclick="loadAndRun('static/temps.csv')">Simulate</button> -->
 
                 <div class="bottom-right">
-                    <button id='submit' onclick="submitCarbonBudget()">Submit</button>
+                    <button class='submit-button' onclick="submitCarbonBudget()">Submit</button>
                 </div>
             </div>
         </div>
-                
+
+        <div class="bottom_images">
+            <img style="height:60px" src="static/logo-royal-society.png" alt="Image 1">
+            <img style="height:60px" src="static/logo-eufunding-hor.png" alt="Image 2">
+            <img style="height:60px" src="static/logo-certainty-long.png" alt="Image 3">
+        </div>
+   
+        
         <script>
          var variable_data =
              /* Data for the variable table. Should be in the form
