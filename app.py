@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, Response, jsonify
 from threading import Thread, Event
 from queue import Queue
 import os
+import time
 
 app = Flask(__name__,
             static_folder='static')
@@ -58,7 +59,7 @@ def trigger():
     value = request.args.get("value", default=50, type=float)  # Default: mid-scale
 
     if x is not None and y is not None and t is not None and (t>=0) and (t < 10000):
-        data = {"x": x, "y": y, "value": value, "t": t}
+        data = {"x": x, "y": y, "value": value, "t": t, "submit_time": time.time()}
         stored_data.append(data)
 
         with open(DATA_FILE, "w") as f:
