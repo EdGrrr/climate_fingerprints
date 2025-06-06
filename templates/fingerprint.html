@@ -200,11 +200,11 @@
              /* Data for the variable table. Should be in the form
                 ID, start val, min, max, step, label, name*/
              [["ghg", 2, 0, 4, 0.001, "Greenhouse Gases",
-               "Red: Temperature scaling for greenhouse gases", "red"],
-              ["aer", 2, 0, 4, 0.001, "Aerosol",
-               "Blue: Temperature scaling for aerosol cooling", "blue"],
-              ["nat", 2, 0, 4, 0.001, "Natural",
-               "Green: Temperature scalig for natural forcings (volcanic and solar)", "green"]]
+               "Greenhouse gas warming (mostly CO2, methane)", "red"],
+              ["aer", 2, 0, 4, 0.001, "Aerosols/particulates",
+               "Aerosol cooling (mostly changes in clouds)", "blue"],
+              ["nat", 2, 0, 4, 0.001, "Natural changes",
+               "Natural forcings (mostly volcanic and solar changes)", "green"]]
 
          function closePopup() {
              document.getElementById('instructionPopup').style.display = 'none';
