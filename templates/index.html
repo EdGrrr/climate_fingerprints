@@ -212,6 +212,7 @@
                  points.push(data);
                  updatePlot();
                  document.getElementById("score").innerHTML = points[points.length-1].value.toFixed(2);
+                 document.getElementById("years").innerHTML = points[points.length-1].t.toFixed(2);
              } catch (err) {
                  console.error("Error parsing SSE data:", err);
              }
